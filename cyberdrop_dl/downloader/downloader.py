@@ -173,6 +173,9 @@ class Downloader:
             await self.mark_incomplete(media_item)
             await self.mark_completed(media_item)
             return False
+        if await self.manager.db_manager.history_table.is_dupe(media_item):
+            Path( media_item.download_folder,media_item.download_filename if isinstance(media_item.download_filename, str) else "").resolve().unlink(missing_ok=True)
+            await self.mark_dupe(media_item)
         return True
 
     async def check_filesize_limits(self, media: MediaItem) -> bool:
@@ -229,6 +232,11 @@ class Downloader:
     async def mark_completed(self, media_item: MediaItem) -> None:
         """Marks the media item as completed in the database"""
         await self.manager.db_manager.history_table.mark_complete(self.domain, media_item)
+
+    async def mark_dupe(self, media_item: MediaItem)->None:
+        Path( media_item.download_folder,media_item.download_filename if isinstance(media_item.download_filename, str) else "").resolve().unlink(missing_ok=True)
+        await self.manager.db_manager.history_table.mark_dupe(self.domain,media_item)
+        self.mark_completed(media_item)
 
     async def set_additional_headers(self) -> None:
         """Sets additional headers for the download session"""
@@ -350,6 +358,9 @@ class Downloader:
                 await self.manager.progress_manager.download_progress.add_previously_completed(False)
                 await self.mark_completed(media_item)
                 return
+            if await self.manager.db_manager.history_table.is_dupe(media_item):
+                Path( media_item.download_folder,media_item.download_filename if isinstance(media_item.download_filename, str) else "").resolve().unlink(missing_ok=True)
+                await self.mark_dupe(media_item)
 
             resume_point = partial_file.stat().st_size if partial_file.exists() else 0
             headers = copy.deepcopy(self._additional_headers)
@@ -371,6 +382,7 @@ class Downloader:
             await self.set_file_datetime(media_item, complete_file)
 
             await self.mark_completed(media_item)
+            
             await self.manager.progress_manager.file_progress.mark_task_completed(media_item.download_task_id)
             await self.manager.progress_manager.download_progress.add_completed()
             return

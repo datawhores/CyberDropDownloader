@@ -11,6 +11,10 @@ from cyberdrop_dl.utils.database.table_definitions import create_history, create
 if TYPE_CHECKING:
     from cyberdrop_dl.utils.dataclasses.url_objects import MediaItem
 
+import pathlib
+import xxhash
+
+BUF_SIZE = 65536
 
 async def get_db_path(url: URL, referer: str = "") -> str:
     """Gets the URL path to be put into the DB and checked from the DB"""
@@ -37,6 +41,8 @@ class HistoryTable:
     def __init__(self, db_conn: aiosqlite.Connection):
         self.db_conn: aiosqlite.Connection = db_conn
         self.ignore_history: bool = False
+        self.hash={}
+
 
     async def startup(self) -> None:
         """Startup process for the HistoryTable"""
@@ -83,7 +89,8 @@ class HistoryTable:
         await self.db_conn.execute("""UPDATE media SET album_id = ? WHERE domain = ? and url_path = ?""",
                                    (media_item.album_id, domain, url_path))
         await self.db_conn.commit()
-
+    def check_complete_by_hash():
+            return
     async def check_complete_by_referer(self, domain: str, referer: URL) -> bool:
         """Checks whether an individual file has completed given its domain and url path"""
         if self.ignore_history:
@@ -115,10 +122,48 @@ class HistoryTable:
         """Mark a download as completed in the database"""
         domain = await get_db_domain(domain)
         url_path = await get_db_path(media_item.url, str(media_item.referer))
-        await self.db_conn.execute("""UPDATE media SET completed = 1, completed_at = CURRENT_TIMESTAMP WHERE domain = ? and url_path = ?""",
-                                   (domain, url_path))
+        hash= self.get_hash(media_item)
+        size=self.get_size(media_item)
+        await self.db_conn.execute("""UPDATE media SET completed = 1, hash=? , size=? WHERE domain = ? and url_path = ?""",
+                                (hash,size,domain, url_path))
         await self.db_conn.commit()
 
+    async def is_dupe(self,media_item):
+        data=await self.db_conn.execute_fetchall("""select hash,size from media""")
+        filter_data=list(filter(lambda x:(self.get_hash(media_item),self.get_size(media_item))==x,data))
+        await self.db_conn.commit()
+        if len(filter_data)<2:
+            return False
+        return True
+        
+
+    async def mark_dupe(self,domain,media_item: MediaItem) -> None:
+        """Mark a download as completed in the database"""
+        domain = await get_db_domain(domain)
+        url_path = await get_db_path(media_item.url, str(media_item.referer))
+        await self.db_conn.execute("""UPDATE media SET dupe = 1 WHERE domain = ? and url_path = ?""",
+                                   (domain,url_path))
+        await self.db_conn.commit()        
+        
+    def get_hash(self,media_item):
+        hasher=xxhash.xxh128()
+        download_filename=pathlib.Path(media_item.download_folder,media_item.download_filename if isinstance(media_item.download_filename, str) else "").resolve()
+        if self.hash.get(str(download_filename)):
+            return self.hash.get(str(download_filename))
+        with open(download_filename, 'rb') as f:
+            while True:
+                data = f.read(BUF_SIZE)
+                if not data:
+                    break
+                hasher.update(data)
+        self.hash[str(download_filename)]=hasher.hexdigest()
+        return hasher.hexdigest()
+    def get_size(self,media_item):
+        download_filename=pathlib.Path(media_item.download_folder,media_item.download_filename if isinstance(media_item.download_filename, str) else "").resolve()
+        return download_filename.stat().st_size
+    
+    
+    
     async def check_filename_exists(self, filename: str) -> bool:
         """Checks whether a downloaded filename exists in the database"""
         cursor = await self.db_conn.cursor()
