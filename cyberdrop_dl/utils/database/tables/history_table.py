@@ -129,6 +129,8 @@ class HistoryTable:
         await self.db_conn.commit()
 
     async def is_dupe(self,media_item):
+        if not bool(self.get_downloaded_filename_mediaitem(media_item)) or not pathlib.Path(self.get_downloaded_filename_mediaitem(media_item)).is_file():
+            return False
         data=await self.db_conn.execute_fetchall("""select hash,size from media""")
         filter_data=list(filter(lambda x:(self.get_hash(media_item),self.get_size(media_item))==x,data))
         await self.db_conn.commit()
@@ -147,7 +149,7 @@ class HistoryTable:
         
     def get_hash(self,media_item):
         hasher=xxhash.xxh128()
-        download_filename=pathlib.Path(media_item.download_folder,media_item.download_filename if isinstance(media_item.download_filename, str) else "").resolve()
+        download_filename=self.get_downloaded_filename_mediaitem(media_item)
         if self.hash.get(str(download_filename)):
             return self.hash.get(str(download_filename))
         with open(download_filename, 'rb') as f:
@@ -159,10 +161,11 @@ class HistoryTable:
         self.hash[str(download_filename)]=hasher.hexdigest()
         return hasher.hexdigest()
     def get_size(self,media_item):
-        download_filename=pathlib.Path(media_item.download_folder,media_item.download_filename if isinstance(media_item.download_filename, str) else "").resolve()
+        download_filename=self.get_downloaded_filename_mediaitem(media_item)
         return download_filename.stat().st_size
     
-    
+    def get_downloaded_filename_mediaitem(self,media_item):
+        return pathlib.Path(media_item.download_folder,media_item.download_filename if isinstance(media_item.download_filename, str) else "").resolve()
     
     async def check_filename_exists(self, filename: str) -> bool:
         """Checks whether a downloaded filename exists in the database"""
