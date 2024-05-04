@@ -1,0 +1,19 @@
+Metadata-Version: 2.1
+Name: filedate
+Version: 3.0
+Home-page: https://github.com/kubinka0505/filedate
+Author: kubinka0505
+Keywords: filedate,file,date,change,changing,changer
+Classifier: Development Status :: 6 - Mature
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: End Users/Desktop
+Classifier: Intended Audience :: System Administrators
+Classifier: License :: OSI Approved :: GNU General Public License v3 (GPLv3)
+Classifier: Natural Language :: English
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Topic :: Desktop Environment :: File Managers
+Requires-Python: >=3.4
+Requires-Dist: python-dateutil
+

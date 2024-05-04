@@ -1,0 +1,3 @@
+[console_scripts]
+cyberdrop-dl=cyberdrop_dl.main:main
+

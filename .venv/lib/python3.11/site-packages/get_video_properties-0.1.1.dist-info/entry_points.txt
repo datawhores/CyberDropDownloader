@@ -1,0 +1,4 @@
+[console_scripts]
+audioprops = videoprops:run2
+videoprops = videoprops:run
+
