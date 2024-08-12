@@ -101,6 +101,10 @@ class DownloadClient:
 
         async with client_session.get(media_item.url, headers=headers, ssl=self.client_manager.ssl_context,
                                       proxy=self.client_manager.proxy) as resp:
+            if str(media_item.url).find("bunkr") and str(resp.url).find("maintenance") and str(media_item.url)!=str(resp.url):
+                for ele in resp.history:
+                    if ele.status==302:
+                        raise Exception("Download redirect")
             if resp.status == HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE:
                 media_item.partial_file.unlink()
                 
