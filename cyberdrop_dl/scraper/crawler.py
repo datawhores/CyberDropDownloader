@@ -68,16 +68,21 @@ class Crawler(ABC):
 
     async def handle_file(self, url: URL, scrape_item: ScrapeItem, filename: str, ext: str) -> None:
         """Finishes handling the file and hands it off to the downloader"""
+        media_item=await self.get_media_item(url,scrape_item,filename,ext)
+        if not await self.handle_file_check(url,scrape_item,filename):
+            return
+        await self.handle_file_send_downloader(media_item)
+    async def get_media_item(self,url:URL,scrape_item: ScrapeItem,filename: str,ext:str) -> None:
+        download_folder = await get_download_path(self.manager, scrape_item, self.folder_domain)
         if self.domain in ['cyberdrop', 'bunkrr']:
             original_filename, filename = await remove_id(self.manager, filename, ext)
         else:
             original_filename = filename
-
-        download_folder = await get_download_path(self.manager, scrape_item, self.folder_domain)
         media_item = MediaItem(url, scrape_item.url, scrape_item.album_id, download_folder, filename, ext, original_filename)
         if scrape_item.possible_datetime:
             media_item.datetime = scrape_item.possible_datetime
-
+        return media_item
+    async def handle_file_check(self, url: URL, scrape_item: ScrapeItem,media_item:MediaItem):
         check_complete = await self.manager.db_manager.history_table.check_complete(self.domain, url, scrape_item.url)
         if check_complete:
             if media_item.album_id:
@@ -85,7 +90,8 @@ class Crawler(ABC):
             await log(f"Skipping {url} as it has already been downloaded", 10)
             await self.manager.progress_manager.download_progress.add_previously_completed()
             return
-
+        return True
+    async def handle_file_send_downloader(self,media_item):
         if await self.manager.download_manager.get_download_limit(self.domain) == 1:
             await self.downloader.run(media_item)
         else:

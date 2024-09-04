@@ -255,6 +255,7 @@ class ScrapeMapper:
         """Creates a XBunkr Crawler instance"""
         from cyberdrop_dl.scraper.crawlers.xbunkr_crawler import XBunkrCrawler
         self.existing_crawlers['xbunkr'] = XBunkrCrawler(self.manager)
+ 
 
     """~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"""
 
@@ -269,6 +270,10 @@ class ScrapeMapper:
         """Starts JDownloader"""
         if self.jdownloader.enabled and isinstance(self.jdownloader.jdownloader_agent, Field):
             await self.jdownloader.jdownloader_setup()
+    async def start_youtube(self) -> None:
+        """Starts YouTube"""
+        from cyberdrop_dl.scraper.crawlers.youtube_crawler import YoutubeCrawler
+        self.youtube_crawler=YoutubeCrawler(self.manager)
 
     async def start(self) -> None:
         """Starts the orchestra"""
@@ -276,6 +281,7 @@ class ScrapeMapper:
 
         await self.start_scrapers()
         await self.start_jdownloader()
+        await self.start_youtube()
 
         await self.no_crawler_downloader.startup()
 
@@ -422,7 +428,6 @@ class ScrapeMapper:
             scraper = self.existing_crawlers[key]
             self.manager.task_group.create_task(scraper.run(scrape_item))
             return
-
         elif await self.extension_check(scrape_item.url):
             check_complete = await self.manager.db_manager.history_table.check_complete("no_crawler", scrape_item.url, scrape_item.url)
             if check_complete:
@@ -435,7 +440,9 @@ class ScrapeMapper:
             filename, ext = await get_filename_and_ext(scrape_item.url.name)
             media_item = MediaItem(scrape_item.url, scrape_item.url, None, download_folder, filename, ext, filename)
             self.manager.task_group.create_task(self.no_crawler_downloader.run(media_item))
-
+        # return  True if youtube  crawler is successful
+        if await self.youtube_crawler.run(scrape_item):
+            return
         elif self.jdownloader.enabled:
             await log(f"Sending unsupported URL to JDownloader: {scrape_item.url}", 10)
             try:
