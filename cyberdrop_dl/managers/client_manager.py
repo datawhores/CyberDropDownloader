@@ -11,6 +11,8 @@ from aiohttp import ClientResponse, ContentTypeError
 from aiolimiter import AsyncLimiter
 
 from cyberdrop_dl.clients.download_client import DownloadClient
+from cyberdrop_dl.clients.youtube_client import YoutubeClient
+
 from cyberdrop_dl.clients.errors import DownloadFailure, DDOSGuardFailure, ScrapeFailure
 from cyberdrop_dl.clients.scraper_client import ScraperClient
 from cyberdrop_dl.utils.utilities import CustomHTTPStatus
@@ -55,6 +57,7 @@ class ClientManager:
 
         self.scraper_session = ScraperClient(self)
         self.downloader_session = DownloadClient(manager, self)
+        self.youtube_session=YoutubeClient(manager,self)
         self._leaky_bucket=LeakyBucket(manager)
 
     """~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"""

@@ -36,7 +36,6 @@ class Manager:
         self.log_manager: LogManager = field(init=False)
         self.db_manager: DBManager = field(init=False)
         self.client_manager: ClientManager = field(init=False)
-
         self.download_manager: DownloadManager = field(init=False)
         self.progress_manager: ProgressManager = field(init=False)
         self.live_manager: LiveManager = field(init=False)
@@ -90,6 +89,9 @@ class Manager:
             await self.db_manager.startup()
         if not isinstance(self.client_manager, ClientManager):
             self.client_manager = ClientManager(self)
+        if not isinstance(self.youtube_client_manager, ClientManager):
+            self.youtube_client_manager = ClientManager(self)
+        
         if not isinstance(self.download_manager, DownloadManager):
             self.download_manager = DownloadManager(self)
         if not isinstance(self.hash_manager, HashManager):
