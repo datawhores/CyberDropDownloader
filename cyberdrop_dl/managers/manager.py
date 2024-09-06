@@ -89,9 +89,6 @@ class Manager:
             await self.db_manager.startup()
         if not isinstance(self.client_manager, ClientManager):
             self.client_manager = ClientManager(self)
-        if not isinstance(self.youtube_client_manager, ClientManager):
-            self.youtube_client_manager = ClientManager(self)
-        
         if not isinstance(self.download_manager, DownloadManager):
             self.download_manager = DownloadManager(self)
         if not isinstance(self.hash_manager, HashManager):

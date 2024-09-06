@@ -15,6 +15,7 @@ from cyberdrop_dl.downloader.downloader import Downloader
 from cyberdrop_dl.scraper.jdownloader import JDownloader
 from cyberdrop_dl.utils.dataclasses.url_objects import ScrapeItem, MediaItem
 from cyberdrop_dl.utils.utilities import log, get_filename_and_ext, get_download_path
+from cyberdrop_dl.scraper.crawlers.youtube_crawler import run_youtube_crawler
 
 if TYPE_CHECKING:
     from typing import List
@@ -270,10 +271,8 @@ class ScrapeMapper:
         """Starts JDownloader"""
         if self.jdownloader.enabled and isinstance(self.jdownloader.jdownloader_agent, Field):
             await self.jdownloader.jdownloader_setup()
-    async def start_youtube(self) -> None:
-        """Starts YouTube"""
-        from cyberdrop_dl.scraper.crawlers.youtube_crawler import YoutubeCrawler
-        self.youtube_crawler=YoutubeCrawler(self.manager)
+
+
 
     async def start(self) -> None:
         """Starts the orchestra"""
@@ -281,7 +280,6 @@ class ScrapeMapper:
 
         await self.start_scrapers()
         await self.start_jdownloader()
-        await self.start_youtube()
 
         await self.no_crawler_downloader.startup()
 
@@ -441,7 +439,7 @@ class ScrapeMapper:
             media_item = MediaItem(scrape_item.url, scrape_item.url, None, download_folder, filename, ext, filename)
             self.manager.task_group.create_task(self.no_crawler_downloader.run(media_item))
         # return  True if youtube  crawler is successful
-        if await self.youtube_crawler.run(scrape_item):
+        if await run_youtube_crawler(self.manager,scrape_item):
             return
         elif self.jdownloader.enabled:
             await log(f"Sending unsupported URL to JDownloader: {scrape_item.url}", 10)

@@ -118,8 +118,6 @@ class DownloadClient:
                     await self.manager.progress_manager.download_progress.add_previously_completed(False)
                     await self.process_completed(media_item, domain)
                     await  self.handle_media_item_completion(media_item,downloaded=False)
-
-
                     return False
             
             ext = Path(media_item.filename).suffix.lower()
@@ -268,6 +266,8 @@ class DownloadClient:
                 elif media_item.complete_file.exists():
                     if media_item.complete_file.stat().st_size == media_item.filesize:
                         proceed = False
+                    elif media_item.filesize==0:
+                        proceed =False
                     else:
                         media_item.complete_file, media_item.partial_file = await self.iterate_filename(media_item.complete_file, media_item)
                 break

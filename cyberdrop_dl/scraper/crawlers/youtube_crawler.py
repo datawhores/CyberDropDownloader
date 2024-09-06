@@ -10,66 +10,70 @@ from cyberdrop_dl.utils.dataclasses.url_objects import ScrapeItem
 from yt_dlp import YoutubeDL
 if TYPE_CHECKING:
     from cyberdrop_dl.managers.manager import Manager
+from cyberdrop_dl.downloader.youtube_downloader import YoutubeDownloader
+
+
+async def run_youtube_crawler(manager,scrape_item):
+    try:
+        crawler=YoutubeCrawler(manager)
+        await crawler.startup()
+        await crawler.run(scrape_item)
+        return True
+    except:
+        return False
+
 
 
 class YoutubeCrawler(Crawler):
-    def __init__(self, manager: Manager):
-        super().__init__(manager, "cyberfile", "Cyberfile")
-        self.api_files = URL('https://cyberfile.me/account/ajax/load_files')
-        self.api_details = URL('https://cyberfile.me/account/ajax/file_details')
-        self.request_limiter = AsyncLimiter(5, 1)
-
-    """~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"""
-
-    async def run(self, item: ScrapeItem) -> None:
-        try:
-            await super().run(item)
-            return True
-        except:
-            return False
+    def __init__(self, manager:Manager):
+        super().__init__(manager,"","")
+    async def startup(self) -> None:
+        """Starts the crawler"""
+        self.client = self.manager.client_manager.youtube_session
+        self.downloader = YoutubeDownloader(self.manager, self.domain)
+        await self.downloader.startup()
     
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         """Runs yt-dlp"""
-        info_dict=self.get_youtube_dl_info(scrape_item)
-        #skip already downloaded
-        await self.handle_file(scrape_item,info_dict)
+        self.set_youtube_dl_info(scrape_item)
+        await self.handle_file(scrape_item)
 
-    async def handle_file(self, scrape_item: ScrapeItem,info_dict:dict):
-        if not await self.check_download(scrape_item, info_dict):
+    async def handle_file(self, scrape_item: ScrapeItem):
+        if not await self.check_download(scrape_item):
             return True
-        media_item,filename=await self.get_media_item_and_filename(scrape_item,info_dict)
-        download_filename=f"{str(media_item.download_folder)}/{filename}"
-        download_url=str(scrape_item.url)
-        _real_main(["-o",download_filename,"--continue",download_url])
+        media_item=await self.get_media_item_via_info(scrape_item)
+        await self.handle_file_send_downloader(media_item)
         return True
-    async def check_download(self,scrape_item:ScrapeItem,info_dict:dict):
-        url=URL(info_dict["webpage_url"])
-        filename=info_dict["title"]
+    async def check_download(self,scrape_item:ScrapeItem):
+        url=URL(self.info_dict["webpage_url"])
+        filename=self.info_dict["title"]
         if not await self.handle_file_check(url,scrape_item,filename):
             return False
         return True
-    async def get_media_item_and_filename(self, scrape_item: ScrapeItem,info_dict:dict)  :
-  
-        ext=info_dict["ext"]
-        url=URL(info_dict["webpage_url"])
-        filename=info_dict["title"]
-        domain=info_dict["extractor"]
-        self.domain=domain.lower()
-        self.folder_domain=domain
+    async def get_media_item_via_info(self, scrape_item: ScrapeItem)  :
+        ext=f".{self.info_dict["ext"]}"
+        url=URL(self.info_dict["webpage_url"])
+        title=self.info_dict["title"]
+        filename=f"{title}{ext}"
         media_item=await self.get_media_item(url,scrape_item,filename,ext)
-        return media_item,filename
+        media_item.filesize=0
+        return media_item
     
-    def get_youtube_dl_info(self,scrape_item:ScrapeItem) ->dict:
+    def set_youtube_dl_info(self,scrape_item:ScrapeItem) ->dict:
         ydl = YoutubeDL({
         'quiet': True,
         'no_warnings': True,
+        'overwrites':False,
         
         })
         with ydl:
         # Extract information
             info_dict = ydl.extract_info(str(scrape_item.url), download=False)
-            return info_dict
+            domain=info_dict["extractor"]
+            self.domain=domain.lower()
+            self.folder_domain=domain
+            self.info_dict=info_dict
 
 
 
