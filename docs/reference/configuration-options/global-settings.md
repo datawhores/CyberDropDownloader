@@ -119,22 +119,27 @@ Set to  0 or None to disable
 
 <details>
 
-<summary>UI Options</summary>
+<summary>Dupe Option</summary>
 
-These are options for enable/disable dupe clean up
+These are options for enable/disable dupe clean up of files
+
+**What is a current file?**
+
+- a file that was downloaded during the current run
+- or a file that were skipped for already existing when dedupe_already_downloaded is true, during the current run
+
+
 ***
 
 * dedupe\_already\_downloaded
-Allows files skipped for already existing on the filesystem to be added to the list of files to process for deduping
+Allows files skipped for already existing on the filesystem to be added to the list of current files
 
 ***
 
 * delete\_after\_download
 
 This toggles the deduping process, which happens after all downloads have finished
-only current files are processed and deduped across all files in the hash database
-
-current files are files that were either downloaded or a file was skipped for already existing when dedupe_already_downloaded is true
+only files in the current files list are compared and deduped across all files in the hash database
 
 ***
 
@@ -145,23 +150,24 @@ With this set as True. Files can be hash after each download, rather than all to
 ***
 
 * keep_new_download
+If delete_after_downloading is True, then one of the following effects will happen
 
-If enabled for each hash and size match one current file will be kept on the system
+1. If enabled then for each hash and size match one current file will be kept on the system
 
-If disabled all current files will be deleted if the following is all true
-- The file did not exist on the filesystem prior to the current run
-- keep prev_download is set to true, this ignores if file exists on the filesystem or not
-- The hash must have already existing on the system prior to the current run
-
-Current files are files that were either downloaded or a file was skipped for already existing when dedupe_already_downloaded is true
+2. If disabled all current files will be deleted if the following is all true
+    * The file did not exist on the filesystem prior to the current run
+    * keep prev_download is set to true, this ignores if file exists on the filesystem or not
+    * The hash must have already existing on the system prior to the current run
+***
 
 * keep\_prev\_download
-prev downloads are files that are match with the hash and size given, and are not a part of the current files list
+If delete_after_downloading is True, then one of the following will effects happen
 
-Current files are files that were either downloaded or a file was skipped for already existing when dedupe_already_downloaded is true
+1. If enabled then at least one existing previous download will be kept on system
+2. If disabled all previous downloads will be deleted
 
-If enabled then at least one existing previous download will be kept on system. 
-If not enabled all previous downloads will be deleted
+prev downloads are files from the database that match with a hash and size combination from the current file list, and are not part of the current file list
+
 
 </details>
 
