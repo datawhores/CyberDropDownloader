@@ -117,12 +117,12 @@ class SortProgress:
             await self.redraw()
         self.progress.advance(task_id, amount)
 
-    async def increment_audio(self):
+    def increment_audio(self):
         self.audio_count += 1
 
-    async def increment_video(self):
+    def increment_video(self):
         self.video_count += 1
-    async def increment_image(self):
+    def increment_image(self):
         self.image_count += 1
-    async def increment_other(self):
+    def increment_other(self):
         self.other_count += 1
