@@ -100,8 +100,7 @@ class SimpCityCrawler(Crawler):
 
         current_post_number = 0
         while True:
-            # posts_dict= self.manager.simpcity_cache_manager.get(str(thread_url))
-            posts_dict=None
+            posts_dict= self.manager.simpcity_cache_manager.get(str(thread_url))
             if not posts_dict:
                 async with self.request_limiter:
                     soup = await self.client.get_BS4(self.domain, thread_url)
@@ -133,8 +132,18 @@ class SimpCityCrawler(Crawler):
                         await self.post(new_scrape_item, post_content, current_post_number)
                     if not continue_scraping:
                         break
-                simp_dict={"posts": post_content_array,"title": title,"date":date}
+                next_page = soup.select_one(self.next_page_selector)
+                simp_dict={"posts": post_content_array,"title": title,"date":date,"next_page":str(next_page)}
                 self.manager.simpcity_cache_manager.save(str(thread_url),json.dumps(simp_dict))
+                if next_page and continue_scraping:
+                    thread_url = next_page.get(self.next_page_attribute)
+                    if thread_url:
+                        if thread_url.startswith("/"):
+                            thread_url = self.primary_base_domain / thread_url[1:]
+                        thread_url = URL(thread_url)
+                        continue
+                else:
+                    break
             else:
                 posts_dict=json.loads(posts_dict)
                 title =posts_dict.get("title")
@@ -154,14 +163,23 @@ class SimpCityCrawler(Crawler):
                         await self.post(new_scrape_item, post_content, current_post_number)
                     if not continue_scraping:
                         break
+                next_page = BeautifulSoup(posts_dict.get("next_page"))
+                if next_page and continue_scraping:
+                    thread_url = next_page.get(self.next_page_attribute)
+                    if thread_url:
+                        if thread_url.startswith("/"):
+                            thread_url = self.primary_base_domain / thread_url[1:]
+                        thread_url = URL(thread_url)
+                        continue
+                else:
+                    break
 
-
-            post_string = f"post-{current_post_number}"
-            if "page-" in scrape_item.url.raw_name or "post-" in scrape_item.url.raw_name:
-                last_post_url = scrape_item.url.parent / post_string
-            else:
-                last_post_url = scrape_item.url / post_string
-            await self.manager.log_manager.write_last_post_log(last_post_url)
+        post_string = f"post-{current_post_number}"
+        if "page-" in scrape_item.url.raw_name or "post-" in scrape_item.url.raw_name:
+            last_post_url = scrape_item.url.parent / post_string
+        else:
+            last_post_url = scrape_item.url / post_string
+        await self.manager.log_manager.write_last_post_log(last_post_url)
 
     @error_handling_wrapper
     async def post(self, scrape_item: ScrapeItem, post_content: Tag, post_number: int) -> None:
