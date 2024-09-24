@@ -104,8 +104,10 @@ class SimpCityCrawler(Crawler):
         current_post_number = 0
         while True:
             posts_dict= self.manager.simpcity_cache_manager.get(str(thread_url))
+            if  posts_dict:
+                posts_dict=json.loads(posts_dict)
             date_now=arrow.now().float_timestamp
-            if not posts_dict or date_now-arrow.get(posts_dict.get("date"))>THREE_DAYS:
+            if not posts_dict or date_now-posts_dict.get("date")>THREE_DAYS:
                 async with self.request_limiter:
                     soup = await self.client.get_BS4(self.domain, thread_url)
                 title_block = soup.select_one(self.title_selector)
@@ -149,7 +151,6 @@ class SimpCityCrawler(Crawler):
                 else:
                     break
             else:
-                posts_dict=json.loads(posts_dict)
                 title =posts_dict.get("title")
                 posts= posts_dict.get("posts")
                 date = posts_dict.get("page_date")
@@ -167,7 +168,7 @@ class SimpCityCrawler(Crawler):
                         await self.post(new_scrape_item, post_content, current_post_number)
                     if not continue_scraping:
                         break
-                next_page = BeautifulSoup(posts_dict.get("next_page"))
+                next_page = BeautifulSoup(posts_dict.get("next_page")).a
                 if next_page and continue_scraping:
                     thread_url = next_page.get(self.next_page_attribute)
                     if thread_url:
