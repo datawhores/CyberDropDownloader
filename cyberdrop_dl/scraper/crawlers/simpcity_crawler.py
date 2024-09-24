@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import re
 from typing import TYPE_CHECKING
+import json
+
 
 from aiolimiter import AsyncLimiter
 from bs4 import Tag, BeautifulSoup
 from yarl import URL
-import json
+import arrow
 
 from cyberdrop_dl.scraper.crawler import Crawler
 from cyberdrop_dl.utils.dataclasses.url_objects import ScrapeItem
@@ -16,6 +18,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.managers.manager import Manager
 
 
+THREE_DAYS=86400*3
 class SimpCityCrawler(Crawler):
     def __init__(self, manager: Manager):
         super().__init__(manager, "simpcity", "SimpCity")
@@ -101,7 +104,8 @@ class SimpCityCrawler(Crawler):
         current_post_number = 0
         while True:
             posts_dict= self.manager.simpcity_cache_manager.get(str(thread_url))
-            if not posts_dict:
+            date_now=arrow.now().float_timestamp
+            if not posts_dict or date_now-arrow.get(posts_dict.get("date"))>THREE_DAYS:
                 async with self.request_limiter:
                     soup = await self.client.get_BS4(self.domain, thread_url)
                 title_block = soup.select_one(self.title_selector)
@@ -133,7 +137,7 @@ class SimpCityCrawler(Crawler):
                     if not continue_scraping:
                         break
                 next_page = soup.select_one(self.next_page_selector)
-                simp_dict={"posts": post_content_array,"title": title,"date":date,"next_page":str(next_page)}
+                simp_dict={"posts": post_content_array,"title": title,"page_date":date,"next_page":str(next_page),"date":arrow.now()}
                 self.manager.simpcity_cache_manager.save(str(thread_url),json.dumps(simp_dict))
                 if next_page and continue_scraping:
                     thread_url = next_page.get(self.next_page_attribute)
@@ -148,7 +152,7 @@ class SimpCityCrawler(Crawler):
                 posts_dict=json.loads(posts_dict)
                 title =posts_dict.get("title")
                 posts= posts_dict.get("posts")
-                date = posts_dict.get("date")
+                date = posts_dict.get("page_date")
 
                 for post in posts:
                     current_post_number = post.get("current_post_number")
