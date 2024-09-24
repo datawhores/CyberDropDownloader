@@ -137,7 +137,7 @@ class SimpCityCrawler(Crawler):
                     if not continue_scraping:
                         break
                 next_page = soup.select_one(self.next_page_selector)
-                simp_dict={"posts": post_content_array,"title": title,"page_date":date,"next_page":str(next_page),"date":arrow.now()}
+                simp_dict={"posts": post_content_array,"title": title,"page_date":date,"next_page":str(next_page),"date":arrow.now().float_timestamp}
                 self.manager.simpcity_cache_manager.save(str(thread_url),json.dumps(simp_dict))
                 if next_page and continue_scraping:
                     thread_url = next_page.get(self.next_page_attribute)
