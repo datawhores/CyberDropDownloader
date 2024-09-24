@@ -100,7 +100,8 @@ class SimpCityCrawler(Crawler):
 
         current_post_number = 0
         while True:
-            posts_dict= self.manager.simpcity_cache_manager.get(str(thread_url))
+            # posts_dict= self.manager.simpcity_cache_manager.get(str(thread_url))
+            posts_dict=None
             if not posts_dict:
                 async with self.request_limiter:
                     soup = await self.client.get_BS4(self.domain, thread_url)
@@ -130,10 +131,10 @@ class SimpCityCrawler(Crawler):
                         post_content_array.append({"data"   : str(post_content),"current_post_number":current_post_number})
 
                         await self.post(new_scrape_item, post_content, current_post_number)
-                    simp_dict={"posts": post_content_array,"title": title,"date":date}
-                    self.manager.simpcity_cache_manager.save(str(thread_url),json.dumps(simp_dict))
                     if not continue_scraping:
                         break
+                simp_dict={"posts": post_content_array,"title": title,"date":date}
+                self.manager.simpcity_cache_manager.save(str(thread_url),json.dumps(simp_dict))
             else:
                 posts_dict=json.loads(posts_dict)
                 title =posts_dict.get("title")
@@ -150,7 +151,6 @@ class SimpCityCrawler(Crawler):
                         # for elem in post.find_all(self.quotes_selector):
                         #     elem.decompose()
                         post_content =BeautifulSoup(post.get("data"))
-    
                         await self.post(new_scrape_item, post_content, current_post_number)
                     if not continue_scraping:
                         break
