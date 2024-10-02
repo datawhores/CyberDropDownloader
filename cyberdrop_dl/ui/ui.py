@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from pydoc import pager
+from rich.markdown import Markdown
 from textwrap import dedent
 from typing import TYPE_CHECKING
 
@@ -11,7 +11,10 @@ from rich import print as rprint
 import asyncio
 from rich.console import Console
 
-import cyberdrop_dl.utils.changelog as Changelog
+import aiofiles
+from aiohttp import request
+import asyncio
+
 from cyberdrop_dl import __version__
 from cyberdrop_dl.clients.hash_client import hash_directory_scanner
 from cyberdrop_dl.ui.prompts.general_prompts import (
@@ -21,6 +24,7 @@ from cyberdrop_dl.ui.prompts.settings_global_prompts import edit_global_settings
 from cyberdrop_dl.ui.prompts.settings_hash_prompts import path_prompt
 from cyberdrop_dl.ui.prompts.settings_user_prompts import create_new_config_prompt, edit_config_values_prompt
 from cyberdrop_dl.ui.prompts.url_file_prompts import edit_urls_prompt
+from cyberdrop_dl.utils.utilities import check_latest_pypi
 
 console = Console()
 
@@ -204,9 +208,37 @@ def program_ui(manager: Manager):
             import_cyberdrop_v4_items_prompt(manager)
 
         elif action == 11:
-            pager(Changelog.__doc__)
+            changelog_path = manager.path_manager.config_dir.parent / "CHANGELOG.md"
+            changelog_content = asyncio.run(_get_changelog(changelog_path))
+
+            with console.pager(links = True):
+                console.print(Markdown(changelog_content , justify = "left"))
 
         # Exit
         elif action == 12:
             asyncio.run(manager.cache_manager.close())
             exit(0)
+
+
+async def _get_changelog(changelog_path: Path):
+    url = "https://raw.githubusercontent.com/jbsparrow/CyberDropDownloader/refs/heads/master/CHANGELOG.md"
+    _ , lastest_version = await check_latest_pypi(log_to_console = False)
+    latest_changelog = changelog_path.with_name(f"{changelog_path.stem}_{lastest_version}{changelog_path.suffix}")
+    if not latest_changelog.is_file():
+        changelog_pattern = f"{changelog_path.stem}*{changelog_path.suffix}"
+        for old_changelog in changelog_path.parent.glob(changelog_pattern):
+            old_changelog.unlink() 
+        try:
+            async with request("GET", url) as response:
+                response.raise_for_status()
+                async with aiofiles.open(latest_changelog, 'wb') as f:   
+                    await f.write(await response.read())
+        except Exception:
+            return "UNABLE TO GET CHANGELOG INFORMATION"
+ 
+    changelog_lines = latest_changelog.read_text(encoding="utf8").splitlines()
+    # remove keep_a_changelog disclaimer
+    changelog_content = "\n".join(changelog_lines[:4] + changelog_lines[6:])
+    
+    return changelog_content
+    
