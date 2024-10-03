@@ -19,7 +19,7 @@ from cyberdrop_dl.managers.progress_manager import ProgressManager
 from cyberdrop_dl.utils.args import config_definitions
 from cyberdrop_dl.utils.dataclasses.supported_domains import SupportedDomains
 from cyberdrop_dl.utils.transfer.first_time_setup import TransitionManager
-from cyberdrop_dl.utils.utilities import log
+from cyberdrop_dl.utils.utilities import log, show_cached_request_summary
 
 
 class Manager:
@@ -156,7 +156,8 @@ class Manager:
         forum_credentials_provided = {}
 
         for forum in SupportedDomains.supported_forums_map.values():
-            if self.config_manager.authentication_data["Forums"][f"{forum}_xf_user_cookie"]:
+            
+            if forum != "simpcity" and self.config_manager.authentication_data["Forums"][f"{forum}_xf_user_cookie"]:
                 forum_xf_cookies_provided[f"{forum} XF Cookie Provided"] = True
             else:
                 forum_xf_cookies_provided[f"{forum} XF Cookie Provided"] = False
@@ -222,6 +223,7 @@ class Manager:
 
     async def close(self) -> None:
         """Closes the manager"""
+        await show_cached_request_summary() 
         await self.db_manager.close()
         self.console_manager.close()
         await self.cache_manager.close()

@@ -44,7 +44,11 @@ class ScrapeMapper:
                         "rule34.xxx": self.rule34xxx,
                         "rule34.xyz": self.rule34xyz, "saint": self.saint, "scrolller": self.scrolller,
                         "socialmediagirls": self.socialmediagirls, "toonily": self.toonily,
+<<<<<<< HEAD
                         "xbunker": self.xbunker, "xbunkr": self.xbunkr, "bunkr": self.bunkrr,"simpcity":self.simpcity}
+=======
+                        "xbunker": self.xbunker, "xbunkr": self.xbunkr, "bunkr": self.bunkrr, "simpcity": self.simpcity}
+>>>>>>> origin/aiohttp-client-caching
         self.existing_crawlers = {}
         self.no_crawler_downloader = Downloader(self.manager, "no_crawler")
         self.jdownloader = JDownloader(self.manager)

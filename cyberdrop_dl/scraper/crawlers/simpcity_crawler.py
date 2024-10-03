@@ -50,6 +50,8 @@ class SimpCityCrawler(Crawler):
         self.attachments_block_selector = "section[class=message-attachments]"
         self.attachments_selector = "a"
         self.attachments_attribute = "href"
+        self.label_selector = "a[class=label]"
+        self.tag_selector = "a[class=tagItem]"
 
     """~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"""
 
@@ -68,26 +70,27 @@ class SimpCityCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         """Determines where to send the scrape item based on the url"""
         task_id = await self.scraping_progress.add_task(scrape_item.url)
-        
-        ddg1 = ''
-        ddg2 = ''
-        ddg5 = ''
-        ddg_id = ''
-        ddg_mark = ''
-        kZJdisc_csrf = ''
-        
-        self.manager.client_manager.cookies.update_cookies({"__ddg1_": ddg1, "__ddg2_": ddg2, "__ddg5_": ddg5, "__ddgid_": ddg_id, "__ddgmark_": ddg_mark, "kZJdisc_csrf": kZJdisc_csrf}, response_url=URL("https://simpcity.su"))
 
         if not self.logged_in and self.login_attempts == 0:
             login_url = self.primary_base_domain / "login"
-            session_cookie = self.manager.config_manager.authentication_data['Forums']['simpcity_xf_user_cookie']
             username = self.manager.config_manager.authentication_data['Forums']['simpcity_username']
             password = self.manager.config_manager.authentication_data['Forums']['simpcity_password']
             wait_time = 5
+            
+            try:
+                ddg1 = self.manager.config_manager.authentication_data['Forums']['simpcity_ddg_cookie_1']
+                ddg2 = self.manager.config_manager.authentication_data['Forums']['simpcity_ddg_cookie_2']
+                ddg5 = self.manager.config_manager.authentication_data['Forums']['simpcity_ddg_cookie_5']
+                ddg_id = self.manager.config_manager.authentication_data['Forums']['simpcity_ddg_id']
+                ddg_mark = self.manager.config_manager.authentication_data['Forums']['simpcity_ddg_mark']
+                self.manager.client_manager.cookies.update_cookies({"__ddg1_": ddg1, "__ddg2_": ddg2, "__ddg5_": ddg5, "__ddgid_": ddg_id, "__ddgmark_": ddg_mark}, response_url=URL("https://" + login_url.host))
+            except KeyError:
+                await log("SimpCity DDOS-Guard cookies not found. Skipping SimpCity.", 40)
+                return
 
-            if session_cookie or (username and password):
+            if username and password:
                 self.login_attempts += 1
-                await self.forum_login(login_url, session_cookie, username, password, wait_time)
+                await self.forum_login(login_url, None, username, password, wait_time)
 
         if not self.logged_in and self.login_attempts == 1:
             await log("SimpCity login failed. Scraping without an account.", 40)

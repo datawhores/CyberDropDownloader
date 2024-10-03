@@ -13,7 +13,7 @@ from multidict import CIMultiDictProxy
 from yarl import URL
 
 from cyberdrop_dl.clients.errors import InvalidContentTypeFailure, DDOSGuardFailure, ScrapeFailure
-from cyberdrop_dl.utils.utilities import log
+from cyberdrop_dl.utils.utilities import log, log_request_type
 
 if TYPE_CHECKING:
     from cyberdrop_dl.managers.client_manager import ClientManager
@@ -80,6 +80,12 @@ class ScraperClient:
             if status != "ok":
                 raise ScrapeFailure(status="DDOS-Guard", message="Failed to resolve URL with flaresolverr")
 
+            # Update cookies
+            for cookie in json_obj.get("solution").get("cookies"):
+                self.client_manager.cookies.update_cookies({cookie["name"]: cookie["value"]}, response_url=cookie["domain"])
+            # Update User-Agent for future requests
+            self._headers["User-Agent"] = json_obj.get("solution").get("userAgent")
+
             return json_obj.get("solution").get("response")
 
     @limiter
@@ -88,6 +94,7 @@ class ScraperClient:
         client_session.cache.filter_fn = filter_fn
         async with client_session.get(url, headers=self._headers, ssl=self.client_manager.ssl_context,
                                       proxy=self.client_manager.proxy) as response:
+            await log_request_type(url,response.from_cache)
             try:
                 await self.client_manager.check_http_status(response)
             except DDOSGuardFailure:
@@ -108,6 +115,7 @@ class ScraperClient:
         client_session.cache.filter_fn = filter_fn
         async with client_session.get(url, headers=self._headers, ssl=self.client_manager.ssl_context,
                                       proxy=self.client_manager.proxy) as response:
+            await log_request_type(url,response.from_cache)
             await self.client_manager.check_http_status(response)
             content_type = response.headers.get('Content-Type')
             assert content_type is not None
@@ -125,6 +133,7 @@ class ScraperClient:
 
         async with client_session.get(url, headers=headers, ssl=self.client_manager.ssl_context,
                                       proxy=self.client_manager.proxy, params=params) as response:
+            await log_request_type(url,response.from_cache)
             await self.client_manager.check_http_status(response)
             content_type = response.headers.get('Content-Type')
             assert content_type is not None
@@ -138,13 +147,14 @@ class ScraperClient:
         client_session.cache.filter_fn = filter_fn
         async with client_session.get(url, headers=self._headers, ssl=self.client_manager.ssl_context,
                                       proxy=self.client_manager.proxy) as response:
+            await log_request_type(url,response.from_cache)
             try:
                 await self.client_manager.check_http_status(response)
             except DDOSGuardFailure:
                 response_text = await self.flaresolverr(domain, url)
                 return response_text
-            text=response.text()
-            return text
+            text = await CachedStreamReader(await response.read()).read()
+            return text.decode('utf8')
 
     @limiter
     async def post_data(self, domain: str, url: URL, client_session: ClientSession, data: Dict,
@@ -155,7 +165,7 @@ class ScraperClient:
                                        proxy=self.client_manager.proxy, data=data) as response:
             await self.client_manager.check_http_status(response)
             if req_resp:
-                return json.loads(await response.content.read())
+                return await response.json()
             else:
                 return {}
 
