@@ -94,7 +94,7 @@ class ScraperClient:
             return json_obj.get("solution").get("response")
 
     @limiter
-    async def get_BS4(self, domain: str, url: URL, client_session: ClientSession, filter_fn: function = lambda x: True ) -> BeautifulSoup:
+    async def get_BS4(self, domain: str, url: URL, client_session: ClientSession, filter_fn: function = lambda x: False ) -> BeautifulSoup:
         """Returns a BeautifulSoup object from the given URL"""
         client_session.cache.filter_fn = filter_fn
         async with client_session.get(url, headers=self._headers, ssl=self.client_manager.ssl_context,
