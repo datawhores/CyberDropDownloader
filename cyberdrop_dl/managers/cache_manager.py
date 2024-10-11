@@ -75,26 +75,10 @@ class CacheManager:
 
         if response.url in self.return_values:
             return self.return_values[response.url]
-
-        async def check_simpcity_page(self, response: ClientResponse):
-            """Checks if the last page has been reached"""
-
-            final_page_selector = "li.pageNav-page a"
-            current_page_selector = "li.pageNav-page.pageNav-page--current a"
-
-            soup = BeautifulSoup(await response.text(), "html.parser")
-            try:
-                last_page = int(soup.select(final_page_selector)[-1].text.split('page-')[-1])
-                current_page = int(soup.select_one(current_page_selector).text.split('page-')[-1])
-            except AttributeError:
-                await log(f"Last page not found for {response.url}. Assuming only one page.", 40)
-                return False
-            return current_page != last_page
-
         filter_dict = {"simpcity.su": check_simpcity_page}
 
         filter_fn=filter_dict.get(response.url.host)
-        return await filter_fn(self,response) if filter_fn else False
+        return await filter_fn(response) if filter_fn else False
 
     def load_request_cache(self) -> None:
         urls_expire_after = {'*.simpcity.su': self.manager.config_manager.global_settings_data['Rate_Limiting_Options'][
@@ -136,3 +120,20 @@ class CacheManager:
 
     async def close(self):
         await self.request_cache.close()
+
+async def check_simpcity_page(response: ClientResponse):
+    """Checks if the last page has been reached"""
+
+    final_page_selector = "li.pageNav-page a"
+    current_page_selector = "li.pageNav-page.pageNav-page--current a"
+
+    soup = BeautifulSoup(await response.text(), "html.parser")
+    try:
+        last_page = int(soup.select(final_page_selector)[-1].text.split('page-')[-1])
+        current_page = int(soup.select_one(current_page_selector).text.split('page-')[-1])
+    except AttributeError:
+        await log(f"Last page not found for {response.url}. Assuming only one page.", 40)
+        return False
+    return current_page != last_page
+
+
