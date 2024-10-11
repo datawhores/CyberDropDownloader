@@ -47,6 +47,9 @@ class Sorter:
         self.video_count = 0
         self.other_count = 0
 
+
+
+
     async def find_files_in_dir(self, directory: Path) -> list:
         """Finds all files in a directory and returns them in a list"""
         file_list = []

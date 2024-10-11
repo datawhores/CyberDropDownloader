@@ -255,6 +255,7 @@ async def remove_id(manager: Manager, filename: str, ext: str) -> Tuple[str, str
 
 async def purge_dir_tree(dirname: Path) -> None:
     """Purges empty files and directories"""
+    
 
     for file in dirname.rglob('*'):
         if file.is_file() and file.stat().st_size == 0:
@@ -274,7 +275,7 @@ async def check_partials_and_empty_folders(manager: Manager):
         await log_with_color("Deleting partial downloads...", "bold_red", 20)
         partial_downloads = manager.path_manager.download_dir.rglob("*.part")
         for file in partial_downloads:
-            file.unlink(missing_ok=True)
+            file.unlink(missing_ok=True) 
     elif not manager.config_manager.settings_data['Runtime_Options']['skip_check_for_partial_files']:
         await log_with_color("Checking for partial downloads...", "yellow", 20)
         partial_downloads = any(f.is_file() for f in manager.path_manager.download_dir.rglob("*.part"))

@@ -55,6 +55,8 @@ class LogManager:
         """Updates the last forum post"""
         input_file = self.manager.path_manager.input_file
         base_urls = []
+        # we need to touch the file just in case, purge_tree deletes it
+        input_file.touch(exist_ok=True)
 
         async with aiofiles.open(input_file, 'r') as f:
             current_urls = await f.readlines()
