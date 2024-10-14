@@ -12,7 +12,7 @@ from cyberdrop_dl.ui.ui import program_ui
 from cyberdrop_dl.utils.sorting import Sorter
 from cyberdrop_dl.utils.utilities import check_latest_pypi, log_with_color, check_partials_and_empty_folders, log
 from cyberdrop_dl.managers.console_manager import print_
-
+from cyberdrop_dl.clients.errors import InvalidYamlConfig
 from rich.console import Console
 from rich.logging import RichHandler
 
@@ -48,6 +48,10 @@ def startup() -> Manager:
             program_ui(manager)
 
         return manager
+
+    except InvalidYamlConfig as e:
+        print_ (e.message_rich)
+        exit (1)
 
     except KeyboardInterrupt:
         print_("\nExiting...")
@@ -188,6 +192,7 @@ def main():
     with contextlib.suppress(RuntimeError):
         try:
             asyncio.run(director(manager))
+        
         except KeyboardInterrupt:
             print_("\nTrying to Exit...")
             with contextlib.suppress(Exception):

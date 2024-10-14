@@ -83,7 +83,7 @@ class HashClient:
         try:
             if self.manager.config_manager.global_settings_data['Dupe_Cleanup_Options']['hash_while_downloading']:
                 await self.hash_item(media_item.complete_file, media_item.original_filename, media_item.referer
-                                     )
+                                    )
         except Exception as e:
             await log(f"After hash processing failed: {media_item.complete_file} with error {e}", 40)
 
@@ -188,7 +188,7 @@ class HashClient:
 
                     if selected_file:
                         size_dict[size] = {'selected': selected_file,
-                                           'others': list(map(lambda x: str(x.absolute()), files))}
+                                        'others': list(map(lambda x: str(x.absolute()), files))}
                     else:
                         del size_dict[size]
             return hashes_dict

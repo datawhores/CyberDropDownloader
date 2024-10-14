@@ -44,12 +44,15 @@ class MediaFireCrawler(Crawler):
 
         title = await self.create_title(folder_details['folder_info']['name'], folder_key, None)
 
+        scrape_item.album_id = folder_key
+        scrape_item.part_of_album = True
+
         chunk = 1
         chunk_size = 100
         while True:
             try:
                 folder_contents = self.api.folder_get_content(folder_key=folder_key, content_type='files', chunk=chunk,
-                                                              chunk_size=chunk_size)
+                                                            chunk_size=chunk_size)
             except api.MediaFireConnectionError:
                 raise ScrapeFailure(500, "MediaFire connection closed")
             files = folder_contents['folder_content']['files']

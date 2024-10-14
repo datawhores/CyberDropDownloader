@@ -47,6 +47,9 @@ class GoFileCrawler(Crawler):
     async def album(self, scrape_item: ScrapeItem) -> None:
         """Scrapes an album"""
         content_id = scrape_item.url.name
+        scrape_item.album_id = content_id
+        scrape_item.part_of_album = True
+
         password = scrape_item.url.query.get("password","")
         if password:
             password = sha256(password.encode()).hexdigest()
@@ -54,8 +57,8 @@ class GoFileCrawler(Crawler):
         try:
             async with self.request_limiter:
                 JSON_Resp = await self.client.get_json(self.domain,
-                                                       (self.api_address / "contents" / content_id).with_query(
-                                                           {"wt": self.websiteToken, "password": password }), headers_inc=self.headers)
+                                                    (self.api_address / "contents" / content_id).with_query(
+                                                        {"wt": self.websiteToken, "password": password }), headers_inc=self.headers)
         except DownloadFailure as e:
             if e.status == http.HTTPStatus.UNAUTHORIZED:
                 self.websiteToken = ""
@@ -63,8 +66,8 @@ class GoFileCrawler(Crawler):
                 await self.get_website_token(self.js_address, self.client)
                 async with self.request_limiter:
                     JSON_Resp = await self.client.get_json(self.domain,
-                                                           (self.api_address / "contents" / content_id).with_query(
-                                                               {"wt": self.websiteToken, "password": password}), headers_inc=self.headers)
+                                                        (self.api_address / "contents" / content_id).with_query(
+                                                            {"wt": self.websiteToken, "password": password}), headers_inc=self.headers)
             else:
                 raise ScrapeFailure(e.status, e.message)
             

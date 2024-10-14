@@ -86,6 +86,9 @@ class CoomerCrawler(Crawler):
         date = post["published"].replace("T", " ")
         post_id = post["id"]
         post_title = post["title"]
+
+        scrape_item.album_id = post_id
+        scrape_item.part_of_album = True
         if not post_title:
             post_title = "Untitled"
 
@@ -163,7 +166,7 @@ class CoomerCrawler(Crawler):
         return current_offset, maximum_offset
 
     async def create_new_scrape_item(self, link: URL, old_scrape_item: ScrapeItem, user: str, title: str, post_id: str,
-                                     date: str, add_parent: Optional[URL] = None) -> None:
+                                    date: str, add_parent: Optional[URL] = None) -> None:
         """Creates a new scrape item with the same parent as the old scrape item"""
         post_title = None
         if self.manager.config_manager.settings_data['Download_Options']['separate_posts']:

@@ -46,6 +46,7 @@ class Rule34VaultCrawler(Crawler):
             soup = await self.client.get_BS4(self.domain, scrape_item.url)
 
         title = await self.create_title(scrape_item.url.parts[1], None, None)
+        scrape_item.part_of_album = True
 
         content_block = soup.select_one(
             'div[class="box-grid ng-star-inserted"]')
@@ -66,7 +67,7 @@ class Rule34VaultCrawler(Crawler):
                 scrape_item.url.parts[1].split("page=")[-1].split("&")[0])
             next_page = scrape_item.url.with_path(
                 f"/{scrape_item.url.parts[1]}".replace(f"page={page}",
-                                                       f"page={page + 1}"),
+                                                    f"page={page + 1}"),
                 encoded=True,
             )
         else:
@@ -83,8 +84,9 @@ class Rule34VaultCrawler(Crawler):
             soup = await self.client.get_BS4(self.domain, scrape_item.url)
 
         title_str = soup.select_one("div[class*=title]").text
-        title = await self.create_title(title_str, scrape_item.url.parts[-1],
-                                        None)
+        scrape_item.part_of_album = True
+        scrape_item.album_id = scrape_item.url.parts[-1]
+        title = await self.create_title(title_str, scrape_item.album_id , None)
 
         content_block = soup.select_one(
             'div[class="box-grid ng-star-inserted"]')
