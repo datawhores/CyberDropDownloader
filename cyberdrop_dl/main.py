@@ -173,13 +173,11 @@ async def director(manager: Manager) -> None:
             await check_latest_pypi()
             await log("Closing Program...", 20)
             await manager.close()
-
             await log_with_color("\nFinished downloading. Enjoy :)", 'green', 20)
             await asyncio.sleep(5)
         except Exception as e:
             await log("\nAn error occurred, please report this to the developer:", 50, exc_info=True)
             exit(1)
-
 
 
 def main():
