@@ -79,7 +79,8 @@ async def post_runtime(manager: Manager) -> None:
         print('\n\n')
     await log_with_color(f"Running Post-Download Processes For Config: {manager.config_manager.loaded_config}...", "green", 20)
     #checking and removing dupes
-    await manager.hash_manager.hash_client.cleanup_dupes()
+    if not manager.args_manager.sort_all_configs:
+        await manager.hash_manager.hash_client.cleanup_dupes()
     if isinstance(manager.args_manager.sort_downloads, bool):
         if manager.args_manager.sort_downloads:
             sorter = Sorter(manager)
@@ -180,15 +181,15 @@ async def director(manager: Manager) -> None:
             await log("Checking for Program End...", 20)
             if not manager.args_manager.all_configs or not list(set(configs) - set(configs_ran)):
                 break
-            await log("Checking for Updates...", 20)
-            await check_latest_pypi()
-            await log("Closing Program...", 20)
-            await manager.close()
-            await log_with_color("\nFinished downloading. Enjoy :)", 'green', 20)
-            await asyncio.sleep(5)
         except Exception as e:
             await log("\nAn error occurred, please report this to the developer:", 50, exc_info=True)
             exit(1)
+    await asyncio.sleep(5)
+    await log("Checking for Updates...", 20)
+    await check_latest_pypi()
+    await log("Closing Program...", 20)
+    await manager.close()
+    await log_with_color("\nFinished downloading. Enjoy :)", 'green', 20)
 
 
 def main():
