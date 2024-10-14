@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cyberdrop-dl-patched"
-version = "5.7.00.dev0"
+version = "5.7.0.dev17"
 description = "Bulk downloader for multiple file hosts"
 authors = ["Jacob B <admin@script-ware.net>"]
 readme = "README.md"
@@ -11,7 +11,7 @@ include = ["CHANGELOG.md"]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-aiohttp = "^3.9.1"
+aiohttp = "3.10.5"
 aiolimiter = "^1.1.0"
 inquirerpy = "^0.3.4"
 platformdirs = "^4.2.2"

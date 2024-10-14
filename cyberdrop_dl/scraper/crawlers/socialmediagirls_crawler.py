@@ -99,8 +99,9 @@ class SocialMediaGirlsCrawler(Crawler):
 
         current_post_number = 0
         while True:
+            thread_url = scrape_item.url if current_post_number == 0 else thread_url
             async with self.request_limiter:
-                soup = await self.client.get_BS4(self.domain, thread_url, filter_fn=self.check_last_page)
+                soup = await self.client.get_BS4(self.domain, thread_url)
 
             title_block = soup.select_one(self.title_selector)
             for elem in title_block.find_all(self.title_trash_selector):

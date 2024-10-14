@@ -23,15 +23,15 @@ def limiter(func):
     """Wrapper handles limits for scrape session"""
 
     @wraps(func)
-    async def wrapper(self, *args, **kwargs):
+    async def wrapper(self: ScraperClient, *args, **kwargs):
         domain_limiter = await self.client_manager.get_rate_limiter(args[0])
         async with self.client_manager.session_limit:
             await self._global_limiter.acquire()
             await domain_limiter.acquire()
 
-            async with aiohttp.ClientSession(headers=self._headers, raise_for_status=False,
+            async with ClientSession(headers=self._headers, raise_for_status=False,
                                             cookie_jar=self.client_manager.cookies, timeout=self._timeouts,
-                                            trace_configs=self.trace_configs) as client:
+                                            trace_configs=self.trace_configs, cache=self.client_manager.manager.cache_manager.request_cache) as client:
                 kwargs['client_session'] = client
                 return await func(self, *args, **kwargs)
 
@@ -72,13 +72,18 @@ class ScraperClient:
         headers = {**self._headers, **{"Content-Type": "application/json"}}
         data = {"cmd": "request.get", "url": str(url), "maxTimeout": 60000}
 
-        async with client_session.post(f"http://{self.client_manager.flaresolverr}/v1", headers=headers,
+        flaresolverr_server = URL(self.client_manager.flaresolverr)
+        if not flaresolverr_server.scheme:
+            flaresolverr_server = URL(f"http://{self.client_manager.flaresolverr}")
+
+        async with client_session.disabled():
+            async with client_session.post(flaresolverr_server / "v1", headers=headers,
                                     ssl=self.client_manager.ssl_context,
                                     proxy=self.client_manager.proxy, json=data) as response:
-            json_obj = await response.json()
-            status = json_obj.get("status")
-            if status != "ok":
-                raise ScrapeFailure(status="DDOS-Guard", message="Failed to resolve URL with flaresolverr")
+                json_obj = await response.json()
+                status = json_obj.get("status")
+                if status != "ok":
+                    raise ScrapeFailure(status="DDOS-Guard", message="Failed to resolve URL with flaresolverr")
 
             # Update cookies
             for cookie in json_obj.get("solution").get("cookies"):
@@ -89,11 +94,11 @@ class ScraperClient:
             return json_obj.get("solution").get("response")
 
     @limiter
-    async def get_BS4(self, domain: str, url: URL, client_session: ClientSession, filter_fn: function = lambda x: True ) -> BeautifulSoup:
+    async def get_BS4(self, domain: str, url: URL, client_session: ClientSession ) -> BeautifulSoup:
         """Returns a BeautifulSoup object from the given URL"""
-        client_session.cache.filter_fn = filter_fn
         async with client_session.get(url, headers=self._headers, ssl=self.client_manager.ssl_context,
                                     proxy=self.client_manager.proxy) as response:
+            await log_request_type(url, response.from_cache)
             try:
                 await self.client_manager.check_http_status(response)
             except DDOSGuardFailure:
@@ -108,12 +113,12 @@ class ScraperClient:
             return bs4
 
     @limiter
-    async def get_BS4_and_return_URL(self, domain: str, url: URL, client_session: ClientSession, filter_fn: function = lambda x: True) -> tuple[
+    async def get_BS4_and_return_URL(self, domain: str, url: URL, client_session: ClientSession) -> tuple[
         BeautifulSoup, URL]:
         """Returns a BeautifulSoup object and response URL from the given URL"""
-        client_session.cache.filter_fn = filter_fn
         async with client_session.get(url, headers=self._headers, ssl=self.client_manager.ssl_context,
                                     proxy=self.client_manager.proxy) as response:
+            await log_request_type(url, response.from_cache)
             await self.client_manager.check_http_status(response)
             content_type = response.headers.get('Content-Type')
             assert content_type is not None
@@ -126,11 +131,11 @@ class ScraperClient:
     async def get_json(self, domain: str, url: URL, params: Optional[Dict] = None, headers_inc: Optional[Dict] = None,
                     client_session: ClientSession = None) -> Dict:
         """Returns a JSON object from the given URL"""
-        client_session.cache.filter_fn = filter_fn
         headers = {**self._headers, **headers_inc} if headers_inc else self._headers
 
         async with client_session.get(url, headers=headers, ssl=self.client_manager.ssl_context,
                                     proxy=self.client_manager.proxy, params=params) as response:
+            await log_request_type(url, response.from_cache)
             await self.client_manager.check_http_status(response)
             content_type = response.headers.get('Content-Type')
             assert content_type is not None
@@ -139,11 +144,11 @@ class ScraperClient:
             return await response.json()
 
     @limiter
-    async def get_text(self, domain: str, url: URL, client_session: ClientSession, filter_fn: function = lambda x: True) -> str:
+    async def get_text(self, domain: str, url: URL, client_session: ClientSession) -> str:
         """Returns a text object from the given URL"""
-        client_session.cache.filter_fn = filter_fn
         async with client_session.get(url, headers=self._headers, ssl=self.client_manager.ssl_context,
                                     proxy=self.client_manager.proxy) as response:
+            await log_request_type(url, response.from_cache)
             try:
                 await self.client_manager.check_http_status(response)
             except DDOSGuardFailure:
@@ -154,9 +159,8 @@ class ScraperClient:
 
     @limiter
     async def post_data(self, domain: str, url: URL, client_session: ClientSession, data: Dict,
-                        req_resp: bool = True, filter_fn: function = lambda x: True) -> Dict:
+                        req_resp: bool = True) -> Dict:
         """Returns a JSON object from the given URL when posting data"""
-        client_session.cache.filter_fn = filter_fn
         async with client_session.post(url, headers=self._headers, ssl=self.client_manager.ssl_context,
                                     proxy=self.client_manager.proxy, data=data) as response:
             await self.client_manager.check_http_status(response)
@@ -166,9 +170,8 @@ class ScraperClient:
                 return {}
 
     @limiter
-    async def get_head(self, domain: str, url: URL, client_session: ClientSession, filter_fn: function = lambda x: True) -> CIMultiDictProxy[str]:
+    async def get_head(self, domain: str, url: URL, client_session: ClientSession) -> CIMultiDictProxy[str]:
         """Returns the headers from the given URL"""
-        client_session.cache.filter_fn = filter_fn
         async with client_session.head(url, headers=self._headers, ssl=self.client_manager.ssl_context,
                                     proxy=self.client_manager.proxy) as response:
             return response.headers

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Tuple, Dict, Optional
 from aiolimiter import AsyncLimiter
 from yarl import URL
 from aiohttp import ClientResponse
+from bs4 import BeautifulSoup
 
 from cyberdrop_dl.scraper.crawler import Crawler
 from cyberdrop_dl.utils.dataclasses.url_objects import ScrapeItem
@@ -27,11 +28,6 @@ class CoomerCrawler(Crawler):
         self.maximum_offset = None
 
     """~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"""
-
-    async def check_last_page(self, response: ClientResponse) -> bool:
-        """Checks if the response is the last page"""
-        current_offset = int(response.url.query.get("o", 0))
-        return current_offset != self.maximum_offset
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         """Determines where to send the scrape item based on the url"""
@@ -54,13 +50,14 @@ class CoomerCrawler(Crawler):
     @error_handling_wrapper
     async def profile(self, scrape_item: ScrapeItem) -> None:
         """Scrapes a profile"""
-        offset, maximum_offset = await self.get_offsets(scrape_item)
+        soup = await self.client.get_BS4(self.domain, scrape_item.url)
+        offset, maximum_offset = await self.get_offsets(scrape_item, soup)
         service, user = await self.get_service_and_user(scrape_item)
-        user_str = await self.get_user_str_from_profile(scrape_item)
+        user_str = await self.get_user_str_from_profile(soup)
         api_call = self.api_url / service / "user" / user
         while offset <= maximum_offset:
             async with self.request_limiter:
-                JSON_Resp = await self.client.get_json(self.domain, api_call.with_query({"o": offset}), filter_fn=self.check_last_page)
+                JSON_Resp = await self.client.get_json(self.domain, api_call.with_query({"o": offset, "omax": maximum_offset}))
                 offset += 50
 
             for post in JSON_Resp:
@@ -126,10 +123,8 @@ class CoomerCrawler(Crawler):
         user = soup.select_one("a[class=post__user-name]").text
         return user
 
-    async def get_user_str_from_profile(self, scrape_item: ScrapeItem) -> str:
+    async def get_user_str_from_profile(self, soup: BeautifulSoup) -> str:
         """Gets the user string from a scrape item"""
-        async with self.request_limiter:
-            soup = await self.client.get_BS4(self.domain, scrape_item.url, filter_fn=lambda x: False)
         user = soup.select_one("span[itemprop=name]").text
         return user
 
@@ -146,9 +141,8 @@ class CoomerCrawler(Crawler):
         post = scrape_item.url.parts[5]
         return service, user, post
 
-    async def get_maximum_offset(self, scrape_item: ScrapeItem) -> int:
+    async def get_maximum_offset(self, soup: BeautifulSoup) -> int:
         """Gets the maximum offset for a scrape item"""
-        soup = await self.client.get_BS4(self.domain, scrape_item.url, filter_fn=lambda x: False)
         menu = soup.select_one("menu")
         if menu is None:
             self.maximum_offset = 0
@@ -159,10 +153,10 @@ class CoomerCrawler(Crawler):
         self.maximum_offset = offset
         return offset
 
-    async def get_offsets(self, scrape_item: ScrapeItem) -> int:
+    async def get_offsets(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> int:
         """Gets the offset for a scrape item"""
         current_offset = int(scrape_item.url.query.get("o", 0))
-        maximum_offset = await self.get_maximum_offset(scrape_item)
+        maximum_offset = await self.get_maximum_offset(soup)
         return current_offset, maximum_offset
 
     async def create_new_scrape_item(self, link: URL, old_scrape_item: ScrapeItem, user: str, title: str, post_id: str,

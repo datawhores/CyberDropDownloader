@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Tuple, List
 
 import aiofiles
 import aiohttp
-from aiohttp import ClientSession
+from aiohttp_client_cache import CachedSession as ClientSession, CachedResponse
 
 from cyberdrop_dl.clients.errors import DownloadFailure, InvalidContentTypeFailure
 from cyberdrop_dl.utils.utilities import FILE_FORMATS, log
@@ -41,13 +41,14 @@ def limiter(func):
         await self._global_limiter.acquire()
         await domain_limiter.acquire()
 
-        async with aiohttp.ClientSession(headers=self._headers, raise_for_status=False,
+        async with ClientSession(headers=self._headers, raise_for_status=False,
                                         cookie_jar=self.client_manager.cookies, timeout=self._timeouts,
                                         trace_configs=self.trace_configs) as client:
             kwargs['client_session'] = client
             return await func(self, *args, **kwargs)
 
     return wrapper
+
 
 
 class DownloadClient:
