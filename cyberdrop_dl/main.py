@@ -173,6 +173,13 @@ async def director(manager: Manager) -> None:
             async with manager.live_manager.get_main_live(stop=True) :
                 await runtime(manager)
                 await post_runtime(manager)
+                 # add the stuff here
+            await log("Printing Stats...", 20)
+            await manager.progress_manager.print_stats()
+
+            await log("Checking for Program End...", 20)
+            if not manager.args_manager.all_configs or not list(set(configs) - set(configs_ran)):
+                break
             await log("Checking for Updates...", 20)
             await check_latest_pypi()
             await log("Closing Program...", 20)
