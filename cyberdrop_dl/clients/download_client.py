@@ -15,7 +15,6 @@ from aiohttp_client_cache import CachedSession as ClientSession, CachedResponse
 
 from cyberdrop_dl.clients.errors import DownloadFailure, InvalidContentTypeFailure
 from cyberdrop_dl.utils.utilities import FILE_FORMATS, log
-from cyberdrop_dl.managers.hash_manager import Hasher
 
 
 if TYPE_CHECKING:
