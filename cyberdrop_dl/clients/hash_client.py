@@ -188,7 +188,7 @@ class HashClient:
 
                     if selected_file:
                         size_dict[size] = {'selected': selected_file,
-                                        'others': list(map(lambda x: str(x.absolute()), files))}
+                                           'others': list(map(lambda x: str(x.absolute()), files))}
                     else:
                         del size_dict[size]
             return hashes_dict
