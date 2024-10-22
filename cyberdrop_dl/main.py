@@ -12,7 +12,7 @@ from cyberdrop_dl.ui.ui import program_ui
 from cyberdrop_dl.utils.sorting import Sorter
 from cyberdrop_dl.utils.utilities import check_latest_pypi, log_with_color, check_partials_and_empty_folders, log
 from cyberdrop_dl.managers.console_manager import print_
-
+from cyberdrop_dl.clients.errors import InvalidYamlConfig
 from rich.console import Console
 from rich.logging import RichHandler
 
@@ -70,9 +70,30 @@ async def runtime(manager: Manager) -> None:
     
 async def post_runtime(manager: Manager) -> None:
     """Actions to complete after main runtime, and before ui shutdown"""
+
+     # Skip clearing console if running with no UI
+    if not manager.args_manager.no_ui:
+        clear_screen_proc = await asyncio.create_subprocess_shell('cls' if os.name == 'nt' else 'clear')
+        await clear_screen_proc.wait()
+    else:
+        print('\n\n')
+    await log_with_color(f"Running Post-Download Processes For Config: {manager.config_manager.loaded_config}...", "green", 20)
     #checking and removing dupes
-    await manager.hash_manager.hash_client.cleanup_dupes()
+    if not manager.args_manager.sort_all_configs:
+        await manager.hash_manager.hash_client.cleanup_dupes()
+    if isinstance(manager.args_manager.sort_downloads, bool):
+        if manager.args_manager.sort_downloads:
+            sorter = Sorter(manager)
+            await sorter.sort()
+    elif manager.config_manager.settings_data['Sorting']['sort_downloads'] and not manager.args_manager.retry_any:
+        sorter = Sorter(manager)
+        await sorter.sort()
+    await check_partials_and_empty_folders(manager)
     
+    if manager.config_manager.settings_data['Runtime_Options']['update_last_forum_post']:
+        await log("Updating Last Forum Post...", 20)
+        await manager.log_manager.update_last_forum_post()
+
 
 async def director(manager: Manager) -> None:
     """Runs the program and handles the UI"""
@@ -149,54 +170,26 @@ async def director(manager: Manager) -> None:
         await manager.async_startup()
 
         await log("Starting UI...", 20)
-        if not manager.args_manager.sort_all_configs:
-            try:
-                async with manager.live_manager.get_main_live(stop=True) :
-                    await runtime(manager)
-                    await post_runtime(manager)
-            except Exception as e:
-                await log("\nAn error occurred, please report this to the developer:", 50, exc_info=True)
-                exit(1)
+        try:
+            async with manager.live_manager.get_main_live(stop=True) :
+                await runtime(manager)
+                await post_runtime(manager)
+                 # add the stuff here)
 
-        # Skip clearing console if running with no UI
-        if not manager.args_manager.no_ui:
-            clear_screen_proc = await asyncio.create_subprocess_shell('cls' if os.name == 'nt' else 'clear')
-            await clear_screen_proc.wait()
-        else:
-            print('\n\n')
+            await log("Checking for Program End...", 20)
+            if not manager.args_manager.all_configs or not list(set(configs) - set(configs_ran)):
+                break
+        except Exception as e:
+            await log("\nAn error occurred, please report this to the developer:", 50, exc_info=True)
+            exit(1)
+    await log("Printing Stats...", 20)
+    await manager.progress_manager.print_stats()
 
-        await log_with_color(f"Running Post-Download Processes For Config: {manager.config_manager.loaded_config}...", "green", 20)
-        if isinstance(manager.args_manager.sort_downloads, bool):
-            if manager.args_manager.sort_downloads:
-                sorter = Sorter(manager)
-                await sorter.sort()
-        elif manager.config_manager.settings_data['Sorting']['sort_downloads'] and not manager.args_manager.retry_any:
-            sorter = Sorter(manager)
-            await sorter.sort()
-        await check_partials_and_empty_folders(manager)
-        
-        if manager.config_manager.settings_data['Runtime_Options']['update_last_forum_post']:
-            await log("Updating Last Forum Post...", 20)
-            await manager.log_manager.update_last_forum_post()
-            
-        
-        # add the stuff here
-
-        
-        await log("Printing Stats...", 20)
-        await manager.progress_manager.print_stats()
-
-        await log("Checking for Program End...", 20)
-        if not manager.args_manager.all_configs or not list(set(configs) - set(configs_ran)):
-            break
-        await asyncio.sleep(5)
-
+    await asyncio.sleep(5)
     await log("Checking for Updates...", 20)
     await check_latest_pypi()
-
     await log("Closing Program...", 20)
     await manager.close()
-
     await log_with_color("\nFinished downloading. Enjoy :)", 'green', 20)
 
 
