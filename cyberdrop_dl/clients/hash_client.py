@@ -94,7 +94,6 @@ class HashClient:
                         hashes_dict[hash][size].append(item)
                 except Exception as e:
                     await log(f"After hash processing failed: {item} with error {e}", 40)
-
         async with self.manager.live_manager.get_remove_file_via_hash_live():
             # #remove downloaded files, so each group only has the first downloaded file
             final_dict=await self.get_candiate_per_group(hashes_dict)
@@ -159,6 +158,7 @@ class HashClient:
                         except OSError:
 
                             pass
+        pass
     async def get_candiate_per_group(self,hashes_dict):
             for hash, size_dict in hashes_dict.items():
                 for size, files in size_dict.items():
