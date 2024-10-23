@@ -88,24 +88,15 @@ class HashClient:
         async with self.manager.live_manager.get_hash_live():
             if not self.manager.config_manager.global_settings_data['Dupe_Cleanup_Options']['delete_after_download']:
                 return
-            hashes_dict = defaultdict(lambda: defaultdict(list))
-            # first compare downloads to each other
-            for media_item in list(self.manager.path_manager.completed_downloads):
-                hash = await self.hash_item(media_item.complete_file, media_item.original_filename, media_item.referer)
-                item = media_item.complete_file.absolute()
-                try:
-                    size = item.stat().st_size
-                    if hash:
-                        hashes_dict[hash][size].append(item)
-                except Exception as e:
-                    await log(f"After hash processing failed: {item} with error {e}", 40)
+            file_hashes_dict=await self.get_file_hashes_dict()
         async with self.manager.live_manager.get_remove_file_via_hash_live():
-            # #remove downloaded files, so each group only has the first downloaded file
-            final_dict=await self.get_candiate_per_group(hashes_dict)
+            final_candiates_dict=await self.get_candiate_per_group(file_hashes_dict)
+            await self.final_dupe_cleanup(final_candiates_dict)
 
+    async def final_dupe_cleanup(self,final_dict):
             for hash, size_dict in final_dict.items():
                 for size, data in size_dict.items():
-                    selected_file = data['selected']
+                    selected_file = pathlib.Path(data['selected'])
                     other_files = data['others']
 
                     # Get all matches from the database
@@ -143,15 +134,28 @@ class HashClient:
                     # delete current download
                     if self.delete_current_download(hash,selected_file):
                         try:
-                            if ele.exists():
-                                self.send2trash(ele)
-                                await log(f"Sent new download:{str(ele)} to trash with hash {hash}", 10)
+                            if selected_file.exists():
+                                self.send2trash(selected_file)
+                                await log(f"Sent new download:{str(selected_file)} to trash with hash {hash}", 10)
                                 await self.manager.progress_manager.hash_progress.add_removed_file()
                         except OSError:
-
                             pass
-        pass
+    async def get_file_hashes_dict(self):
+            hashes_dict = defaultdict(lambda: defaultdict(list))
+            # first compare downloads to each other
+            for media_item in list(self.manager.path_manager.completed_downloads):
+                hash = await self.hash_item(media_item.complete_file, media_item.original_filename, media_item.referer)
+                item = media_item.complete_file.absolute()
+                try:
+                    size = item.stat().st_size
+                    if hash:
+                        hashes_dict[hash][size].append(item)
+                except Exception as e:
+                    await log(f"After hash processing failed: {item} with error {e}", 40)
+            return hashes_dict
+    
     async def get_candiate_per_group(self,hashes_dict):
+            #remove downloaded files, so each group only has the one previously downloaded file or the first downloaded file
             for hash, size_dict in hashes_dict.items():
                 for size, files in size_dict.items():
                     selected_file = None
@@ -192,7 +196,7 @@ class HashClient:
             return True
         elif hash not in self.prev_hashes:
             return True
-        elif selected_file in self.manager.path_manager.prev_downloads_paths:
+        elif str(selected_file) in self.manager.path_manager.prev_downloads_paths:
             return True
-    def keep_prev_file(self):
+    def keep_prev_file(self): 
         return (self.manager.config_manager.global_settings_data['Dupe_Cleanup_Options']['keep_prev_download'])

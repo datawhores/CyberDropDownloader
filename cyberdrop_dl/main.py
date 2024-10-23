@@ -33,6 +33,7 @@ RICH_HANDLER_DEBUG_CONFIG = {
     "locals_max_length": 20
 }
 
+
 def startup() -> Manager:
     """
     Starts the program and returns the manager
