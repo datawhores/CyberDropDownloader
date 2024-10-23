@@ -35,11 +35,7 @@ class TempRefererTable:
 
     async def sql_drop_temp_referers(self) -> None:
         """Delete temp_referers table"""
-<<<<<<< HEAD
-        await self.db_conn.execute("""DROP TABLE IF EXISTS temp_referer;""")
-=======
         await self.db_conn.execute("""DROP TABLE IF EXISTS temp_referer""")
->>>>>>> hashing-5.7-fix
         await self.db_conn.commit()
 
     async def check_referer(self, referer: URL) -> bool:
