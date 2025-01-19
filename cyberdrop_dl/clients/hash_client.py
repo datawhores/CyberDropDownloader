@@ -93,9 +93,13 @@ def hash_directory_scanner(manager: Manager, path: Path, number: int = 10):
 
     for num in [100, 300, 500, 1000, 5000]:
         result = timeit.timeit(partial(wrapper2, num), number=number)
-        print(f"Average execution time for iterative hash_directory_scanner @{num}: {result / number:.4f} seconds")
+        print(
+            f"Average execution time for iterative hash_directory_scanner @{num} insertions: {result / number:.4f} seconds"
+        )
         result = timeit.timeit(partial(wrapper, num), number=number)
-        print(f"Average execution time for batch hash_directory_scanner@ {num}: {result / number:.4f} seconds")
+        print(
+            f"Average execution time for batch hash_directory_scanner@ {num} insertions: {result / number:.4f} seconds"
+        )
         pass
     pass
 
