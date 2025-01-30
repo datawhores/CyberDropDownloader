@@ -320,7 +320,13 @@ class XenforoCrawler(Crawler):
                 if self.is_attachment(link):
                     return await self.handle_internal_link(link, scrape_item)
                 origin = scrape_item.parents[0]
-                return log(f"Skipping nested thread URL {link} found on {origin}", 10)
+                if self.manager.config_manager.settings_data.download_options.maximum_thread_nesting is None:
+                    pass
+                elif (
+                    scrape_item.parents
+                    > self.manager.config_manager.settings_data.download_options.maximum_thread_nesting
+                ):
+                    return log(f"Skipping nested thread URL {link} found on {origin}", 10)
             new_scrape_item = self.create_scrape_item(scrape_item, link)
             new_scrape_item.set_type(None, self.manager)
             self.handle_external_links(new_scrape_item)
