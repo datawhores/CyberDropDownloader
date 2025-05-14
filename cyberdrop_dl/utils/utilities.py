@@ -86,7 +86,7 @@ def error_handling_wrapper(
             link = item
         elif hasattr(item, "url"):
             link = item.url
-        elif isinstance(item, "str"):
+        elif isinstance(item, str):
             link = URL(item)
         origin = exc_info = None
         link_to_show: URL | str = ""
