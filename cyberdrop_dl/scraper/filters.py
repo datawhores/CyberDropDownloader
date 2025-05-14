@@ -27,6 +27,8 @@ MEDIA_EXTENSIONS = FILE_FORMATS["Images"] | FILE_FORMATS["Videos"] | FILE_FORMAT
 
 
 def is_valid_url(scrape_item: ScrapeItem) -> bool:
+    if not hasattr(scrape_item, "url"):
+        return False
     if not scrape_item.url:
         return False
     if not isinstance(scrape_item.url, URL):

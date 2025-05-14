@@ -184,7 +184,7 @@ class ScrapeMapper:
 
     async def filter_and_send_to_crawler(self, scrape_item: ScrapeItem) -> None:
         """Send scrape_item to a supported crawler."""
-        if not isinstance(scrape_item.url, URL):
+        if not hasattr(scrape_item, "url") or not isinstance(scrape_item.url, URL):
             scrape_item.url = URL(scrape_item.url)
         if self.filter_items(scrape_item):
             await self.send_to_crawler(scrape_item)
