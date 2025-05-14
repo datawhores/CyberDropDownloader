@@ -94,7 +94,7 @@ def error_handling_wrapper(
             return await func(*args, **kwargs)
         except CDLBaseError as e:
             # error_log_msg = ErrorLogMessage(e.ui_failure, str(e))
-            error_log_msg = ("", str(e))
+            error_log_msg = ErrorLogMessage("", str(e))
             origin = e.origin
             e_url: URL | str | None = getattr(e, "url", None)
             link_to_show = e_url or link_to_show
