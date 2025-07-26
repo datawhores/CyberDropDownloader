@@ -29,7 +29,7 @@ class DBManager:
 
     async def startup(self) -> None:
         """Startup process for the DBManager."""
-        self._db_conn = await aiosqlite.connect(self._db_path)
+        self._db_conn = await aiosqlite.connect(self._db_path, timeout=120)
 
         self.ignore_history = self.manager.config_manager.settings_data.runtime_options.ignore_history
 
